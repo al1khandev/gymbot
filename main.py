@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List
 from openai import OpenAI
@@ -30,7 +32,7 @@ class ChatRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return {"status": "GymBot backend is running 💪"}
+    return FileResponse("gym_chatbot.html")
 
 @app.post("/chat")
 def chat(req: ChatRequest):
