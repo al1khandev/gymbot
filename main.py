@@ -7,91 +7,66 @@ from pydantic import BaseModel
 from typing import List
 from openai import OpenAI
 
-# 1. API Setup
+# 1. Setup
 API_KEY = os.getenv("NVIDIA_API_KEY", "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")
+client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=API_KEY)
 
 app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-client = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key=API_KEY
-)
-
-# Function to "Read" your website live
-def get_live_site_data():
+def get_site_data():
     url = "https://gymbot-production-a405.up.railway.app/"
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # We find the info using the IDs from your HTML tags
-        # Note: We look for 'value' because they are <input> tags
+        # This function pulls the 'value' (what you typed) or the text
+        def grab(id_name, default):
+            element = soup.find(id=id_name)
+            if not element: return default
+            # Check for <input value="..."> first, then fall back to inner text
+            return element.get('value') or element.text.strip() or default
+
         data = {
-            "name": soup.find(id="gymName")["value"] if soup.find(id="gymName") else "Our Gym",
-            "location": soup.find(id="gymLocation")["value"] if soup.find(id="gymLocation") else "Almaty",
-            "hours": soup.find(id="gymHours")["value"] if soup.find(id="gymHours") else "Standard Hours",
-            "phone": soup.find(id="gymPhone")["value"] if soup.find(id="gymPhone") else "Contact us",
-            "services": soup.find(id="services").text if soup.find(id="services") else "Fitness",
-            "bot_name": soup.find(id="botName")["value"] if soup.find(id="botName") else "Assistant",
-            "extra": soup.find(id="customInstructions").text if soup.find(id="customInstructions") else ""
+            "gym_name": grab("gymName", "IronForge Gym"),
+            "bot_name": grab("botName", "Sara"),
+            "location": grab("gymLocation", "Almaty"),
+            "prices": grab("services", "12,000 ₸ per month"),
+            "hours": grab("gymHours", "08:00 - 22:00")
         }
+        print(f"DEBUG: Scraped Data -> {data}") # This shows in Railway Logs
         return data
     except Exception as e:
-        print(f"Scraping error: {e}")
+        print(f"DEBUG: Scraping failed: {e}")
         return None
 
-class Message(BaseModel):
-    role: str
-    content: str
-
 class ChatRequest(BaseModel):
-    system_prompt: str
-    messages: List[Message]
+    messages: List[dict]
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-    # 1. READ THE SITE LIVE
-    site_info = get_live_site_data()
+    site = get_site_data()
     
-    # 2. CREATE THE PROMPT FROM SITE DATA
-    if site_info:
-        knowledge = f"""
-        Gym Name: {site_info['name']}
-        Agent Name: {site_info['bot_name']}
-        Location: {site_info['location']}
-        Hours: {site_info['hours']}
-        Phone: {site_info['phone']}
-        Services/Prices: {site_info['services']}
-        Special Instructions: {site_info['extra']}
-        """
-    else:
-        knowledge = "We are a professional gym in Almaty."
-
-    system_instruction = f"""
-    You are {site_info['bot_name'] if site_info else 'the manager'}. 
-    Use ONLY this data: {knowledge}
-    Rules:
+    # We build the prompt using the LIVE data from your URL
+    system_prompt = f"""
+    You are {site['bot_name']}, the manager of {site['gym_name']}.
+    LOCATION: {site['location']}
+    PRICES: {site['prices']}
+    HOURS: {site['hours']}
+    
+    RULES:
+    - Use ONLY the information provided above.
+    - If the user asks for a price, tell them {site['prices']}.
+    - Be professional, warm, and motivating.
     - Respond in the user's language (English, Russian, or Kazakh).
-    - If info is missing, ask for a phone number.
-    - Be motivating.
     """
 
     try:
-        all_messages = [{"role": "system", "content": system_instruction}]
-        for m in req.messages:
-            all_messages.append({"role": m.role, "content": m.content})
-
+        messages = [{"role": "system", "content": system_prompt}] + req.messages
         response = client.chat.completions.create(
             model="meta/llama-3.1-70b-instruct",
-            messages=all_messages,
-            max_tokens=500
+            messages=messages,
+            temperature=0.5
         )
         return {"reply": response.choices[0].message.content}
     except Exception as e:
