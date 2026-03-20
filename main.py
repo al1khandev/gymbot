@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException
@@ -8,13 +9,12 @@ from typing import List
 from openai import OpenAI
 
 # 1. Configuration & API Setup
-# I kept your key here as requested, but remember to keep this file private!
 API_KEY = os.getenv("NVIDIA_API_KEY", "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")
 client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=API_KEY)
 
-app = FastAPI(title="GymBot Live Scraper")
+app = FastAPI(title="GymBot Full Backend")
 
-# Enable CORS for Botpress
+# Enable CORS for your Website and Botpress
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,97 +23,109 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 2. The "Aggressive" Scraper Function
-def get_live_site_data():
-    url = "https://gymbot-production-a405.up.railway.app/"
-    try:
-        response = requests.get(url, timeout=10)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Helper to find by ID (checks value, placeholder, then text)
-        def find_by_id(element_id, backup_tag=None):
-            el = soup.find(id=element_id)
-            if el:
-                # Try to get 'value' (for inputs) or 'text' (for <h1>/<span>)
-                return el.get('value') or el.get('placeholder') or el.get_text().strip()
-            
-            # If ID fails, try a generic tag like <h1> as a backup
-            if backup_tag:
-                tag = soup.find(backup_tag)
-                return tag.get_text().strip() if tag else None
-            return None
+# This file will act as your "Memory" so changes stay saved
+DATA_FILE = "data.json"
 
-        data = {
-            "gym_name": find_by_id("gymName", "h1") or "Our Gym",
-            "bot_name": find_by_id("botName") or "Sara",
-            "location": find_by_id("gymLocation") or "Almaty",
-            "prices": find_by_id("services") or "12,000 ₸ per month",
-            "hours": find_by_id("gymHours") or "08:00 - 22:00"
-        }
-        print(f"DEBUG: Scraped from site -> {data}")
-        return data
-    except Exception as e:
-        print(f"Scraping error: {e}")
-        return {
+# Ensure the data file exists when the app starts
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "w") as f:
+        json.dump({
             "gym_name": "Our Gym",
             "bot_name": "Sara",
             "location": "Almaty",
             "prices": "12,000 ₸",
-            "hours": "Mon-Fri 08:00-22:00"
-        }
+            "hours": "08:00 - 22:00"
+        }, f)
 
-# 3. Data Structures
+# 2. Data Models
+class GymSettings(BaseModel):
+    gym_name: str
+    bot_name: str
+    location: str
+    prices: str
+    hours: str
+
 class Message(BaseModel):
     role: str
     content: str
 
 class ChatRequest(BaseModel):
-    system_prompt: str = "ignored"
     messages: List[Message]
 
-@app.get("/")
-def root():
-    return {"status": "GymBot Backend is active and scraping live site data! 💪"}
+# 3. Routes for the Website to Save/Load
+@app.get("/settings")
+def get_settings():
+    with open(DATA_FILE, "r") as f:
+        return json.load(f)
 
-# 4. The Main Chat Logic
+@app.post("/save-settings")
+def save_settings(settings: GymSettings):
+    with open(DATA_FILE, "w") as f:
+        json.dump(settings.dict(), f)
+    return {"status": "success", "message": "Settings saved to data.json"}
+
+# 4. The Live Scraper (Backup)
+def get_live_site_data():
+    url = "https://gymbot-production-a405.up.railway.app/"
+    try:
+        # We try to get the LATEST info from the live URL
+        response = requests.get(url, timeout=5)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        def find_by_id(element_id):
+            el = soup.find(id=element_id)
+            if el:
+                return el.get('value') or el.text.strip()
+            return None
+
+        return {
+            "gym_name": find_by_id("gymName"),
+            "bot_name": find_by_id("botName"),
+            "location": find_by_id("gymLocation"),
+            "prices": find_by_id("services"),
+            "hours": find_by_id("gymHours")
+        }
+    except:
+        return None
+
+# 5. The Main Chat Logic
 @app.post("/chat")
 def chat(req: ChatRequest):
-    # Get the latest data from your website URL
-    site = get_live_site_data()
+    # 1. First, check your saved "Memory" (data.json)
+    with open(DATA_FILE, "r") as f:
+        site = json.load(f)
     
-    # Force the AI to use the scraped information
+    # 2. Try to update with live site data if available
+    live_data = get_live_site_data()
+    if live_data:
+        # Only overwrite if the live data actually found something
+        for key in site:
+            if live_data.get(key):
+                site[key] = live_data[key]
+
     system_instruction = f"""
     You are {site['bot_name']}, the manager of {site['gym_name']}.
-    
-    KNOWLEDGE BASE (FROM WEBSITE):
-    - Gym Name: {site['gym_name']}
-    - Location: {site['location']}
-    - Prices & Services: {site['prices']}
-    - Operating Hours: {site['hours']}
-    
-    RULES:
-    - Use ONLY the information provided above.
-    - If the user asks for a price, you must say: {site['prices']}.
-    - Speak the same language as the user (English, Russian, or Kazakh).
-    - Be professional, warm, and highly motivating.
+    Location: {site['location']}
+    Prices: {site['prices']}
+    Hours: {site['hours']}
+    Speak the user's language (English, Russian, or Kazakh). Be motivating!
     """
 
     try:
-        # Prepare messages for the AI
         all_messages = [{"role": "system", "content": system_instruction}]
         for m in req.messages:
             all_messages.append({"role": m.role, "content": m.content})
 
-        # Call the Llama 3.1 model via NVIDIA
         response = client.chat.completions.create(
             model="meta/llama-3.1-70b-instruct",
             messages=all_messages,
-            max_tokens=800,
-            temperature=0.6
+            max_tokens=500
         )
-        
         return {"reply": response.choices[0].message.content}
-
     except Exception as e:
-        print(f"Error calling API: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Chat Error: {e}")
+        raise HTTPException(status_code=500, detail="AI Service Down")
+
+@app.get("/")
+def health_check():
+    return {"status": "Online", "storage": "data.json active"}
