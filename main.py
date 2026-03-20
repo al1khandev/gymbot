@@ -1,8 +1,8 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles  # <--- Added this
-from fastapi.responses import FileResponse    # <--- Added this
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List
 from openai import OpenAI
@@ -36,25 +36,24 @@ class ChatRequest(BaseModel):
     system_prompt: str
     messages: List[Message]
 
-# --- THE FIX STARTS HERE ---
+# --- ROUTING FIX FOR GYM_CHATBOT.HTML ---
 
-# 1. Change the "/" route to "/status" so it doesn't block your site
+# Move the status message to /status so it doesn't hijack the homepage
 @app.get("/status")
-def root():
+def get_status():
     return {"status": "GymBot is Online 💪"}
 
-# 2. Serve your frontend files
-# This assumes your HTML/CSS/JS files are in a folder named 'static'
-# If your folder is named 'public' or 'frontend', change "static" below to that name.
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+# Serve the HTML file from the root directory
+@app.get("/")
+async def serve_home():
+    # This looks for gym_chatbot.html in your main project folder
+    return FileResponse("gym_chatbot.html")
 
-    # This route serves your index.html when you visit the main URL
-    @app.get("/")
-    async def serve_index():
-        return FileResponse("static/index.html")
+# Mount the root directory as "static" so the HTML can find your .css or .js files
+# This is necessary if your style.css is sitting right next to main.py
+app.mount("/static", StaticFiles(directory="."), name="static")
 
-# --- THE FIX ENDS HERE ---
+# --- END OF FIX ---
 
 # 4. The Main Chat Logic
 @app.post("/chat")
@@ -87,15 +86,4 @@ def chat(req: ChatRequest):
         for m in req.messages:
             all_messages.append({"role": m.role, "content": m.content})
 
-        response = client.chat.completions.create(
-            model="meta/llama-3.1-70b-instruct",
-            messages=all_messages,
-            max_tokens=1000,
-            temperature=0.7
-        )
-        
-        return {"reply": response.choices[0].message.content}
-
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))detail=str(e))
+        response = client.chat.completions
