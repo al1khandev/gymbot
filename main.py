@@ -36,26 +36,21 @@ class ChatRequest(BaseModel):
     system_prompt: str
     messages: List[Message]
 
-# --- ROUTING FIX FOR GYM_CHATBOT.HTML ---
+# --- FRONTEND ROUTING ---
 
-# Move the status message to /status so it doesn't hijack the homepage
 @app.get("/status")
 def get_status():
     return {"status": "GymBot is Online 💪"}
 
-# Serve the HTML file from the root directory
 @app.get("/")
 async def serve_home():
-    # This looks for gym_chatbot.html in your main project folder
     return FileResponse("gym_chatbot.html")
 
-# Mount the root directory as "static" so the HTML can find your .css or .js files
-# This is necessary if your style.css is sitting right next to main.py
+# Mount root for static assets
 app.mount("/static", StaticFiles(directory="."), name="static")
 
-# --- END OF FIX ---
+# --- CHAT LOGIC ---
 
-# 4. The Main Chat Logic
 @app.post("/chat")
 def chat(req: ChatRequest):
     try:
@@ -86,4 +81,17 @@ def chat(req: ChatRequest):
         for m in req.messages:
             all_messages.append({"role": m.role, "content": m.content})
 
-        response = client.chat.completions
+        # This was line 89 causing the crash
+        response = client.chat.completions.create(
+            model="meta/llama-3.1-70b-instruct",
+            messages=all_messages,
+            max_tokens=1000,
+            temperature=0.7
+        )
+        
+        return {"reply": response.choices[0].message.content}
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+# END OF FILE
