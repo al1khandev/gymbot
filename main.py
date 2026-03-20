@@ -7,67 +7,70 @@ from pydantic import BaseModel
 from typing import List
 from openai import OpenAI
 
-# 1. Setup
+# 1. Configuration & API Setup
 API_KEY = os.getenv("NVIDIA_API_KEY", "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")
 client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=API_KEY)
 
-app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(title="GymBot Live Scraper")
 
-def get_site_data():
+# Enable CORS for Botpress
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 2. The "Aggressive" Scraper Function
+def get_live_site_data():
     url = "https://gymbot-production-a405.up.railway.app/"
     try:
         response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # This function pulls the 'value' (what you typed) or the text
-        def grab(id_name, default):
-            element = soup.find(id=id_name)
-            if not element: return default
-            # Check for <input value="..."> first, then fall back to inner text
-            return element.get('value') or element.text.strip() or default
+        # Helper to find by ID (checks value, placeholder, then text)
+        def find_by_id(element_id, backup_tag=None):
+            el = soup.find(id=element_id)
+            if el:
+                return el.get('value') or el.get('placeholder') or el.text.strip()
+            # If ID fails, try a generic tag like <h1> or <h2>
+            if backup_tag:
+                tag = soup.find(backup_tag)
+                return tag.text.strip() if tag else None
+            return None
 
         data = {
-            "gym_name": grab("gymName", "IronForge Gym"),
-            "bot_name": grab("botName", "Sara"),
-            "location": grab("gymLocation", "Almaty"),
-            "prices": grab("services", "12,000 ₸ per month"),
-            "hours": grab("gymHours", "08:00 - 22:00")
+            "gym_name": find_by_id("gymName", "h1") or "Our Gym",
+            "bot_name": find_by_id("botName") or "Sara",
+            "location": find_by_id("gymLocation") or "Almaty",
+            "prices": find_by_id("services") or "Please ask for current rates",
+            "hours": find_by_id("gymHours") or "Standard Hours"
         }
-        print(f"DEBUG: Scraped Data -> {data}") # This shows in Railway Logs
+        print(f"DEBUG: Scraped from site -> {data}")
         return data
     except Exception as e:
-        print(f"DEBUG: Scraping failed: {e}")
-        return None
+        print(f"Scraping error: {e}")
+        return {
+            "gym_name": "Our Gym",
+            "bot_name": "Sara",
+            "location": "Almaty",
+            "prices": "12,000 ₸",
+            "hours": "Mon-Fri 08:00-22:00"
+        }
+
+# 3. Data Structures
+class Message(BaseModel):
+    role: str
+    content: str
 
 class ChatRequest(BaseModel):
-    messages: List[dict]
+    system_prompt: str = "ignored"
+    messages: List[Message]
 
-@app.post("/chat")
-def chat(req: ChatRequest):
-    site = get_site_data()
-    
-    # We build the prompt using the LIVE data from your URL
-    system_prompt = f"""
-    You are {site['bot_name']}, the manager of {site['gym_name']}.
-    LOCATION: {site['location']}
-    PRICES: {site['prices']}
-    HOURS: {site['hours']}
-    
-    RULES:
-    - Use ONLY the information provided above.
-    - If the user asks for a price, tell them {site['prices']}.
-    - Be professional, warm, and motivating.
-    - Respond in the user's language (English, Russian, or Kazakh).
-    """
+@app.get("/")
+def root():
+    return {"status": "GymBot Backend is active and scraping live site data! 💪"}
 
-    try:
-        messages = [{"role": "system", "content": system_prompt}] + req.messages
-        response = client.chat.completions.create(
-            model="meta/llama-3.1-70b-instruct",
-            messages=messages,
-            temperature=0.5
-        )
-        return {"reply": response.choices[0].message.content}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# 4. The Main Chat Logic
+@
