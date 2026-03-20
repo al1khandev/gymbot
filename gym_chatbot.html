@@ -366,7 +366,6 @@
 
 <div class="app">
 
-  <!-- LEFT: GYM CONFIG -->
   <div class="sidebar">
     <div class="sidebar-title">⚙️ Gym Setup</div>
 
@@ -374,11 +373,11 @@
       <div class="section-label">Gym Info</div>
       <div class="form-group">
         <label>Gym Name</label>
-        <input id="gymName" type="text" value="IronForge Gym" placeholder="Your gym name">
+        <input id="gymName" type="text" value="IronForge Gym">
       </div>
       <div class="form-group">
         <label>Location / Address</label>
-        <input id="gymLocation" type="text" value="123 Fitness Ave, Almaty" placeholder="Address">
+        <input id="gymLocation" type="text" value="123 Fitness Ave, Almaty">
       </div>
       <div class="form-group">
         <label>Working Hours</label>
@@ -439,14 +438,13 @@ Locker Rooms & Showers</textarea>
       </div>
       <div class="form-group">
         <label>Custom Instructions</label>
-        <textarea id="customInstructions" rows="4" placeholder="Any extra info for the bot...">Always be warm and motivating. If someone seems hesitant about price, offer a free trial day. Respond in the same language the customer uses.</textarea>
+        <textarea id="customInstructions" rows="4">Always be warm and motivating. If someone seems hesitant about price, offer a free trial day. Respond in the same language the customer uses.</textarea>
       </div>
     </div>
 
     <button class="save-btn" onclick="saveConfig()">💾 SAVE & APPLY</button>
   </div>
 
-  <!-- MIDDLE: CHAT SIMULATOR -->
   <div class="chat-area">
     <div class="chat-header">
       <div class="ig-avatar">👤</div>
@@ -471,13 +469,11 @@ Locker Rooms & Showers</textarea>
     </div>
 
     <div class="chat-input-area">
-      <textarea class="chat-input" id="userInput" placeholder="Type a message as a customer..." rows="1"
-        onkeydown="handleKey(event)"></textarea>
+      <textarea class="chat-input" id="userInput" placeholder="Type a message as a customer..." rows="1" onkeydown="handleKey(event)"></textarea>
       <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
     </div>
   </div>
 
-  <!-- RIGHT: PERSONA & STATS -->
   <div class="right-panel">
     <div class="persona-header">
       <div class="persona-avatar-big">💪</div>
@@ -515,40 +511,9 @@ Locker Rooms & Showers</textarea>
     <div class="section-card">
       <div class="section-label">⚡ Quick Test Prompts</div>
       <div class="quick-replies-list">
-        <div class="qr-item" onclick="quickSend('How much does membership cost?')">
-          <span class="qr-icon">💳</span> Membership prices
-        </div>
-        <div class="qr-item" onclick="quickSend('What are your opening hours?')">
-          <span class="qr-icon">🕐</span> Opening hours
-        </div>
-        <div class="qr-item" onclick="quickSend('Do you have personal trainers?')">
-          <span class="qr-icon">🏋️</span> Personal training
-        </div>
-        <div class="qr-item" onclick="quickSend('Where are you located?')">
-          <span class="qr-icon">📍</span> Location
-        </div>
-        <div class="qr-item" onclick="quickSend('Can I get a free trial?')">
-          <span class="qr-icon">🎁</span> Free trial
-        </div>
-        <div class="qr-item" onclick="quickSend('What classes do you offer?')">
-          <span class="qr-icon">🧘</span> Classes
-        </div>
-        <div class="qr-item" onclick="quickSend('Мне нужна информация о ценах')">
-          <span class="qr-icon">🇷🇺</span> Russian question
-        </div>
-        <div class="qr-item" onclick="quickSend('Is parking available?')">
-          <span class="qr-icon">🚗</span> Parking
-        </div>
-      </div>
-    </div>
-
-    <div class="section-card">
-      <div class="section-label">ℹ️ How to connect to Instagram</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.7">
-        1. Set up your gym info & persona above<br>
-        2. Use <strong style="color:var(--text)">Meta Business API</strong> or tools like <strong style="color:var(--text)">ManyChat</strong> / <strong style="color:var(--text)">Chatfuel</strong> to connect<br>
-        3. Use the system prompt generated below and pass it to Claude API<br>
-        4. Route all DMs → webhook → this bot → reply back
+        <div class="qr-item" onclick="quickSend('How much does membership cost?')">Membership prices</div>
+        <div class="qr-item" onclick="quickSend('Opening hours?')">Opening hours</div>
+        <div class="qr-item" onclick="quickSend('Мне нужна информация о ценах')">Russian Support</div>
       </div>
     </div>
 
@@ -567,6 +532,7 @@ let selectedTone = 'Friendly';
 let msgCount = 0;
 let replyCount = 0;
 let conversationHistory = [];
+const API_URL = 'https://gymbot-production-a405.up.railway.app';
 
 function getConfig() {
   return {
@@ -587,47 +553,46 @@ function getConfig() {
 }
 
 function buildSystemPrompt(cfg) {
-  return `You are ${cfg.botName}, a friendly and knowledgeable staff member at ${cfg.gymName}. You manage the gym's Instagram DMs. Your job is to answer questions naturally, as a real human gym receptionist would — warm, helpful, and motivating.
-
-IMPORTANT RULES:
-- NEVER reveal you are an AI or chatbot. You are ${cfg.botName}, a real staff member.
-- Be ${cfg.tone.toLowerCase()} and human in tone. Use natural language, occasional emojis 💪, and vary your sentence structure.
-- Respond in the same language the customer uses (English, Russian, Kazakh, etc.)
-- Keep responses concise but complete. Don't use bullet points unless listing prices.
-- If someone wants to visit or sign up, encourage them warmly and offer to help with next steps.
-
-GYM INFORMATION:
-📍 Location: ${cfg.location}
-🕐 Hours: ${cfg.hours}
-📞 Contact: ${cfg.phone}
-
-💰 MEMBERSHIP PRICES:
-- 1 Month: ${cfg.price1m}
-- 3 Months: ${cfg.price3m}
-- 6 Months: ${cfg.price6m}
-- 1 Year: ${cfg.price1y}
-- Single Visit (drop-in): ${cfg.priceDrop}
-
-🏋️ SERVICES:
-${cfg.services}
-
-SPECIAL INSTRUCTIONS:
-${cfg.customInstructions}`;
+  return `You are ${cfg.botName}, a ${cfg.tone.toLowerCase()} staff member at ${cfg.gymName}. 
+  📍 Location: ${cfg.location}. Hours: ${cfg.hours}. 💰 Prices: 1m: ${cfg.price1m}, Drop-in: ${cfg.priceDrop}.
+  Services: ${cfg.services}. Instructions: ${cfg.customInstructions}`;
 }
 
-function saveConfig() {
+async function saveConfig() {
   const cfg = getConfig();
+  
+  // Update Local UI
   document.getElementById('personaName').textContent = cfg.botName;
   document.getElementById('systemPromptPreview').value = buildSystemPrompt(cfg);
-  document.getElementById('welcomeMsg').innerHTML = `Hey! 👋 Welcome to <strong>${cfg.gymName}</strong>! I'm ${cfg.botName}, happy to help. What can I do for you today?`;
-  conversationHistory = [];
-  showToast('✅ Config saved & bot updated!');
-}
-
-function selectTone(el) {
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  selectedTone = el.textContent;
+  document.getElementById('welcomeMsg').innerHTML = `Hey! 👋 Welcome to <strong>${cfg.gymName}</strong>! I'm ${cfg.botName}, happy to help.`;
+  
+  // SAVE TO CLOUD (Railway)
+  try {
+    const response = await fetch(`${API_URL}/save-settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gym_name: cfg.gymName,
+        location: cfg.location,
+        hours: cfg.hours,
+        phone: cfg.phone,
+        price1m: cfg.price1m,
+        price3m: cfg.price3m,
+        price6m: cfg.price6m,
+        price1y: cfg.price1y,
+        priceDrop: cfg.priceDrop,
+        services: cfg.services,
+        bot_name: cfg.botName,
+        custom_instructions: cfg.customInstructions
+      })
+    });
+    if (response.ok) {
+        showToast('✅ Config Saved & Synced with Botpress!');
+        localStorage.setItem('gymSettings', JSON.stringify(cfg));
+    }
+  } catch (e) {
+    showToast('❌ Failed to sync with server');
+  }
 }
 
 async function sendMessage() {
@@ -638,124 +603,89 @@ async function sendMessage() {
   appendMessage(text, 'user');
   msgCount++;
   document.getElementById('statMsgs').textContent = msgCount;
-  await getBotReply(text);
-}
-
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
+  
+  // Get AI Response
+  showTyping();
+  conversationHistory.push({ role: 'user', content: text });
+  
+  try {
+    const response = await fetch(`${API_URL}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_prompt: buildSystemPrompt(getConfig()),
+        messages: conversationHistory
+      })
+    });
+    const data = await response.json();
+    removeTyping();
+    appendMessage(data.reply, 'bot');
+    conversationHistory.push({ role: 'assistant', content: data.reply });
+    replyCount++;
+    document.getElementById('statReplies').textContent = replyCount;
+  } catch (err) {
+    removeTyping();
+    appendMessage("Error connecting to server. Is Railway running?", 'bot');
   }
-}
-
-function quickSend(text) {
-  document.getElementById('userInput').value = text;
-  sendMessage();
 }
 
 function appendMessage(text, role) {
   const container = document.getElementById('chatMessages');
   const row = document.createElement('div');
   row.className = `msg-row ${role === 'user' ? 'user' : ''}`;
-  const now = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  if (role === 'user') {
-    row.innerHTML = `
-      <div>
-        <div class="bubble user-b">${escapeHtml(text)}</div>
-        <div class="bubble-time" style="text-align:right">${now}</div>
-      </div>
-      <div class="msg-avatar">👤</div>`;
-  } else {
-    row.innerHTML = `
-      <div class="msg-avatar bot-av">💪</div>
-      <div>
-        <div class="bubble bot-b">${text}</div>
-        <div class="bubble-time">${now}</div>
-      </div>`;
-  }
+  row.innerHTML = role === 'user' ? 
+    `<div><div class="bubble user-b">${text}</div></div><div class="msg-avatar">👤</div>` :
+    `<div class="msg-avatar bot-av">💪</div><div><div class="bubble bot-b">${text}</div></div>`;
   container.appendChild(row);
   container.scrollTop = container.scrollHeight;
 }
 
 function showTyping() {
   const container = document.getElementById('chatMessages');
-  const indicator = document.createElement('div');
-  indicator.className = 'msg-row';
-  indicator.id = 'typingIndicator';
-  indicator.innerHTML = `
-    <div class="msg-avatar bot-av">💪</div>
-    <div class="typing-indicator">
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-    </div>`;
-  container.appendChild(indicator);
+  const div = document.createElement('div');
+  div.id = 'typing';
+  div.className = 'msg-row';
+  div.innerHTML = `<div class="msg-avatar bot-av">💪</div><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
 
-function removeTyping() {
-  const el = document.getElementById('typingIndicator');
-  if (el) el.remove();
+function removeTyping() { document.getElementById('typing')?.remove(); }
+
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+
+function selectTone(el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedTone = el.textContent;
+  saveConfig();
 }
 
-async function getBotReply(userText) {
-  const cfg = getConfig();
-  const systemPrompt = buildSystemPrompt(cfg);
-  document.getElementById('sendBtn').disabled = true;
-  showTyping();
+function quickSend(t) { document.getElementById('userInput').value = t; sendMessage(); }
 
-  conversationHistory.push({ role: 'user', content: userText });
-
-  try {
-    // UPDATED RAILWAY URL HERE
-    const response = await fetch('https://gymbot-production-a405.up.railway.app/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_prompt: systemPrompt,
-        messages: conversationHistory
-      })
-    });
-    const data = await response.json();
-    const reply = data.reply || "I'm here to help! Could you rephrase that?";
-    conversationHistory.push({ role: 'assistant', content: reply });
-    removeTyping();
-    appendMessage(reply.replace(/\n/g, '<br>'), 'bot');
-    replyCount++;
-    document.getElementById('statReplies').textContent = replyCount;
-  } catch (err) {
-    removeTyping();
-    appendMessage("Sorry, I'm having trouble connecting right now. Please try again! 😊", 'bot');
-    console.error("Error:", err);
-  }
-
-  document.getElementById('sendBtn').disabled = false;
+function showToast(m) {
+  const t = document.getElementById('toast');
+  t.textContent = m; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 function copyPrompt() {
-  const ta = document.getElementById('systemPromptPreview');
-  if (!ta.value) {
+  navigator.clipboard.writeText(document.getElementById('systemPromptPreview').value);
+  showToast('📋 Prompt Copied!');
+}
+
+// Load previous settings from browser memory on startup
+window.onload = () => {
+    const saved = localStorage.getItem('gymSettings');
+    if (saved) {
+        const s = JSON.parse(saved);
+        document.getElementById('gymName').value = s.gymName;
+        document.getElementById('gymLocation').value = s.location;
+        document.getElementById('price1m').value = s.price1m;
+        // ... (etc for other fields)
+    }
     saveConfig();
-  }
-  navigator.clipboard.writeText(ta.value).then(() => showToast('📋 System prompt copied!')).catch(() => {
-    ta.select(); document.execCommand('copy');
-    showToast('📋 Copied!');
-  });
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// Init
-window.onload = () => { saveConfig(); };
+};
 </script>
 </body>
 </html>
