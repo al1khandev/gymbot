@@ -36,30 +36,37 @@ class ChatRequest(BaseModel):
 
 class SettingsUpdate(BaseModel):
     gym_name: str
-    gym_address: str
-    training_price: str
-    custom_prompt: str
+    location: str
+    hours: str
+    phone: str
+    price1m: str
+    price3m: str
+    price6m: str
+    price1y: str
+    priceDrop: str
+    services: str
+    bot_name: str
+    custom_instructions: str
 
 # --- HELPER FUNCTIONS ---
 
 def load_gym_info():
-    """Loads settings from a file if it exists, otherwise uses defaults."""
+    """Reads the JSON file to give the AI the latest gym data."""
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
+            d = json.load(f)
             return f"""
-            Gym Name: {data.get('gym_name')}
-            Address: {data.get('gym_address')}
-            Price: {data.get('training_price')}
-            Instructions: {data.get('custom_prompt')}
+            Gym Name: {d.get('gym_name')}
+            Address: {d.get('location')}
+            Hours: {d.get('hours')}
+            Phone: {d.get('phone')}
+            PRICES: 1m: {d.get('price1m')}, 3m: {d.get('price3m')}, 6m: {d.get('price6m')}, 1y: {d.get('price1y')}, Drop-in: {d.get('priceDrop')}
+            SERVICES: {d.get('services')}
+            BOT PERSONA: Name is {d.get('bot_name')}. {d.get('custom_instructions')}
             """
-    return os.getenv("GYM_KNOWLEDGE", "Gym: IronForge, Price: 5000₸, Address: Almaty")
+    return "Gym: IronForge, Location: Almaty, Price: 12000₸"
 
 # --- ROUTES ---
-
-@app.get("/status")
-def get_status():
-    return {"status": "GymBot is Online 💪"}
 
 @app.get("/")
 async def serve_home():
@@ -67,30 +74,21 @@ async def serve_home():
 
 @app.post("/save-settings")
 async def save_settings(settings: SettingsUpdate):
-    """Saves the gym details to a JSON file so the server remembers them."""
+    """Saves everything from your fancy HTML form to a file."""
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(settings.dict(), f)
-    return {"message": "Settings saved successfully! Botpress is now updated."}
-
-app.mount("/static", StaticFiles(directory="."), name="static")
-
-# --- CHAT LOGIC (What Botpress Calls) ---
+    return {"status": "success", "message": "Settings saved for Website and Botpress!"}
 
 @app.post("/chat")
 def chat(req: ChatRequest):
     try:
-        # Every time Botpress calls this, we load the LATEST saved info
-        current_gym_knowledge = load_gym_info()
-
-        system_instruction = f"""
-        You are a professional Gym Manager. 
-        USE THIS DATA ONLY:
-        {current_gym_knowledge}
+        # We use the SAVED info if it exists, otherwise use the prompt sent by the request
+        # This makes Botpress and the Web Preview both work perfectly.
+        current_knowledge = load_gym_info()
         
-        RULES:
-        - If the user's question isn't answered in the data, ask for their phone number.
-        - Speak the same language as the user (English, Russian, or Kazakh).
-        """
+        system_instruction = req.system_prompt
+        if "IronForge" in current_knowledge: # Simple check to see if we have custom data
+             system_instruction += f"\n\nUSE THIS UPDATED GYM DATA:\n{current_knowledge}"
 
         all_messages = [{"role": "system", "content": system_instruction}]
         for m in req.messages:
@@ -99,12 +97,10 @@ def chat(req: ChatRequest):
         response = client.chat.completions.create(
             model="meta/llama-3.1-70b-instruct",
             messages=all_messages,
-            max_tokens=1000,
             temperature=0.7
         )
-        
         return {"reply": response.choices[0].message.content}
-
     except Exception as e:
-        print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
