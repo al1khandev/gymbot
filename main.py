@@ -6,7 +6,7 @@ from openai import OpenAI
 
 app = FastAPI()
 
-# 1. ALLOW CONECTION FROM YOUR MAC
+# 1. ALLOW CONNECTION FROM YOUR MAC
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,13 +15,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 2. INITIALIZE AI (Get your key from Railway Environment Variables)
-# If you haven't set an API Key yet, the bot will use "Demo Mode"
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "your-key-here"))
+# 2. THE ENGINE
+# PASTE YOUR nvapi-... KEY INSIDE THE QUOTES BELOW:
+NVIDIA_KEY = "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"
+
+client = OpenAI(
+  base_url="https://integrate.api.nvidia.com/v1",
+  api_key=NVIDIA_KEY
+)
 
 @app.get("/")
 async def status():
-    return {"status": "Online", "mode": "GymBot AI Production"}
+    return {"status": "Online", "engine": "NVIDIA NIM Active"}
 
 @app.post("/chat")
 async def chat(request: Request):
@@ -30,22 +35,23 @@ async def chat(request: Request):
         system_prompt = data.get("system_prompt", "You are a helpful gym assistant.")
         messages = data.get("messages", [])
 
-        # Add the system instructions to the start of the AI's memory
+        # Construct the payload
         ai_payload = [{"role": "system", "content": system_prompt}] + messages
 
-        # 3. ASK THE AI FOR A RESPONSE
+        # 3. CALL THE NVIDIA MODEL
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo", # Or gpt-4o for better Kazakh/Russian
+            model="nvidia/llama-3.1-405b-instruct",
             messages=ai_payload,
-            temperature=0.7
+            temperature=0.2,
+            top_p=0.7,
+            max_tokens=1024,
         )
         
         reply = response.choices[0].message.content
         return {"reply": reply}
 
     except Exception as e:
-        # If no API key is found, it falls back to this message
-        return {"reply": f"Connect your OpenAI Key in Railway to enable AI. (Error: {str(e)})"}
+        return {"reply": f"System Error: {str(e)}"}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
