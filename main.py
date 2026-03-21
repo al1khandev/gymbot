@@ -2,20 +2,32 @@ import os
 import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from openai import OpenAI
 
-# 1. API Setup
-# Use Environment Variable for security on Railway
+# ── Config ──────────────────────────────────────────────
 API_KEY = os.getenv("NVIDIA_API_KEY", "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")
 SETTINGS_FILE = "gym_settings.json"
 
+DEFAULT_SETTINGS = {
+    "gym_name": "IronForge Gym",
+    "bot_name": "Sara",
+    "location": "123 Fitness Ave, Almaty",
+    "hours": "Mon–Fri 6:00–23:00, Sat–Sun 8:00–22:00",
+    "phone": "+7 777 123 4567",
+    "price1m": "12,000 ₸",
+    "price3m": "30,000 ₸",
+    "price6m": "54,000 ₸",
+    "price1y": "96,000 ₸",
+    "priceDrop": "2,500 ₸",
+    "services": "Personal Training (from 5,000 ₸/session)\nGroup Classes (Yoga, HIIT, Boxing)\nNutrition Consultation\nSauna & Recovery Zone\nFree Parking\nLocker Rooms & Showers",
+    "custom_instructions": "Always be warm and motivating. If someone seems hesitant about price, offer a free trial day. Respond in the same language the customer uses."
+}
+
 app = FastAPI(title="GymBot Backend")
 
-# 2. Enable CORS (Crucial so your Website and Botpress can talk to the API)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,20 +38,20 @@ app.add_middleware(
 
 client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=API_KEY)
 
-# 3. Data Models
+# ── Models ───────────────────────────────────────────────
 class SettingsUpdate(BaseModel):
-    gym_name: str
-    location: str
-    hours: str
-    phone: str
-    price1m: str
-    price3m: str
-    price6m: str
-    price1y: str
-    priceDrop: str
-    services: str
-    bot_name: str
-    custom_instructions: str
+    gym_name: Optional[str] = None
+    location: Optional[str] = None
+    hours: Optional[str] = None
+    phone: Optional[str] = None
+    price1m: Optional[str] = None
+    price3m: Optional[str] = None
+    price6m: Optional[str] = None
+    price1y: Optional[str] = None
+    priceDrop: Optional[str] = None
+    services: Optional[str] = None
+    bot_name: Optional[str] = None
+    custom_instructions: Optional[str] = None
 
 class Message(BaseModel):
     role: str
@@ -49,66 +61,70 @@ class ChatRequest(BaseModel):
     system_prompt: Optional[str] = None
     messages: List[Message]
 
-# --- HELPER FUNCTIONS ---
-
-def load_settings_from_file():
-    """Helper to read the saved JSON data."""
+# ── Helpers ──────────────────────────────────────────────
+def load_settings():
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return None
+    return DEFAULT_SETTINGS
 
-# --- ROUTES ---
+def save_settings_to_file(data: dict):
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
+# ── Routes ───────────────────────────────────────────────
 @app.get("/")
 async def serve_home():
-    """Serves your fancy HTML dashboard."""
-    return FileResponse("gym_chatbot.html")
-
-@app.post("/save-settings")
-async def save_settings(settings: SettingsUpdate):
-    """Receives data from your website and saves it to a file."""
-    try:
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(settings.dict(), f, ensure_ascii=False, indent=4)
-        return {"status": "success", "message": "Settings updated for Botpress and Website!"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    if os.path.exists("gym_chatbot.html"):
+        return FileResponse("gym_chatbot.html")
+    return {"status": "GymBot backend is running 💪"}
 
 @app.get("/get-settings")
 async def get_settings():
-    """Botpress calls this to get the latest Gym info."""
-    data = load_settings_from_file()
-    if data:
-        return data
-    # Fallback if no settings have been saved yet
-    return {
-        "gym_name": "IronForge Gym",
-        "bot_name": "Sara",
-        "location": "Default Location",
-        "price1m": "12000 ₸",
-        "services": "General Fitness",
-        "custom_instructions": "Be helpful."
-    }
+    """Botpress and frontend call this to get gym info."""
+    return load_settings()
+
+@app.post("/save-settings")
+async def save_settings(settings: SettingsUpdate):
+    """Frontend calls this when user saves gym config."""
+    try:
+        current = load_settings()
+        updated = {**current, **{k: v for k, v in settings.dict().items() if v is not None}}
+        save_settings_to_file(updated)
+        return {"status": "success", "settings": updated}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat")
-def chat(req: ChatRequest):
-    """Used by the 'Test Chat' window on your website."""
+async def chat(req: ChatRequest):
+    """Used by website test chat and Botpress."""
     try:
-        saved_data = load_settings_from_file()
-        
-        # Build the 'Brain' of the bot based on saved settings
-        if saved_data:
-            system_instruction = f"""
-            You are {saved_data['bot_name']}, an assistant for {saved_data['gym_name']}.
-            Address: {saved_data['location']}
-            Hours: {saved_data['hours']}
-            Prices: 1m({saved_data['price1m']}), 3m({saved_data['price3m']}), 1y({saved_data['price1y']}), Drop-in({saved_data['priceDrop']})
-            Services: {saved_data['services']}
-            Persona: {saved_data['custom_instructions']}
-            """
-        else:
-            system_instruction = req.system_prompt or "You are a helpful gym assistant."
+        gym = load_settings()
+
+        system_instruction = req.system_prompt or f"""
+You are {gym['bot_name']}, a friendly staff member at {gym['gym_name']}.
+NEVER say you are an AI. You are a real person working at the gym.
+Respond in the same language the customer uses.
+
+GYM INFO:
+- Name: {gym['gym_name']}
+- Address: {gym['location']}
+- Hours: {gym['hours']}
+- Phone: {gym['phone']}
+
+PRICES:
+- 1 Month: {gym['price1m']}
+- 3 Months: {gym['price3m']}
+- 6 Months: {gym['price6m']}
+- 1 Year: {gym['price1y']}
+- Single Visit: {gym['priceDrop']}
+
+SERVICES:
+{gym['services']}
+
+INSTRUCTIONS:
+{gym['custom_instructions']}
+"""
 
         all_messages = [{"role": "system", "content": system_instruction}]
         for m in req.messages:
@@ -117,11 +133,9 @@ def chat(req: ChatRequest):
         response = client.chat.completions.create(
             model="meta/llama-3.1-70b-instruct",
             messages=all_messages,
+            max_tokens=1000,
             temperature=0.7
         )
         return {"reply": response.choices[0].message.content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# Mount static files so images/scripts in the same folder work
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
