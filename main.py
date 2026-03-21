@@ -81,12 +81,10 @@ async def serve_home():
 
 @app.get("/get-settings")
 async def get_settings():
-    """Botpress and frontend call this to get gym info."""
     return load_settings()
 
 @app.post("/save-settings")
 async def save_settings(settings: SettingsUpdate):
-    """Frontend calls this when user saves gym config."""
     try:
         current = load_settings()
         updated = {**current, **{k: v for k, v in settings.dict().items() if v is not None}}
@@ -97,7 +95,6 @@ async def save_settings(settings: SettingsUpdate):
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
-    """Used by website test chat and Botpress."""
     try:
         gym = load_settings()
 
