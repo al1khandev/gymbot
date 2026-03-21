@@ -3,540 +3,482 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GymBot — Instagram DM Assistant</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>GymBot Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0a;
-    --surface: #111111;
-    --card: #181818;
+    --bg: #0e0e0e;
+    --white: #161616;
+    --surface: #1c1c1c;
     --border: #2a2a2a;
-    --accent: #ff3d3d;
-    --accent2: #ff8c00;
-    --text: #f0f0f0;
-    --muted: #777;
-    --success: #22c55e;
-    --user-bubble: #1e1e1e;
-    --bot-bubble: #1a1a2e;
+    --accent: #c8a96e;
+    --accent-hover: #b8944f;
+    --text: #f0ede8;
+    --muted: #6b6760;
+    --success: #4ade80;
+    --success-bg: rgba(74,222,128,0.08);
+    --input-bg: #131313;
+    --shadow: 0 2px 16px rgba(0,0,0,0.3);
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Manrope', sans-serif;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
   }
 
   /* HEADER */
   header {
-    background: var(--surface);
+    background: var(--white);
     border-bottom: 1px solid var(--border);
-    padding: 16px 32px;
+    padding: 0 40px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     position: sticky; top: 0; z-index: 100;
   }
   .logo {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 28px;
-    letter-spacing: 2px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
   }
-  .logo span { color: var(--text); -webkit-text-fill-color: var(--text); }
-  .status-pill {
-    display: flex; align-items: center; gap: 8px;
-    background: rgba(34,197,94,0.1);
-    border: 1px solid rgba(34,197,94,0.3);
-    border-radius: 100px;
+  .logo span { color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .lang-switcher {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .lang-btn {
     padding: 6px 14px;
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Manrope', sans-serif;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+  .lang-btn.active { background: var(--accent); color: #0e0e0e; }
+  .status-pill {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--success-bg);
+    border: 1px solid rgba(74,222,128,0.15);
+    border-radius: 100px;
+    padding: 5px 14px;
+    font-size: 12px; font-weight: 600;
     color: var(--success);
+    letter-spacing: 0.3px;
   }
   .status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
+    width: 7px; height: 7px; border-radius: 50%;
     background: var(--success);
     animation: pulse 2s infinite;
   }
-  @keyframes pulse {
-    0%,100% { opacity:1; transform:scale(1); }
-    50% { opacity:0.5; transform:scale(0.8); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* PAGE HEADER */
+  .page-header {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 36px 24px 0;
   }
+  .page-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px; font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .page-subtitle { font-size: 14px; color: var(--muted); font-weight: 400; }
 
   /* LAYOUT */
-  .app {
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
     display: grid;
-    grid-template-columns: 320px 1fr 340px;
-    flex: 1;
-    overflow: hidden;
-    height: calc(100vh - 65px);
-  }
-
-  /* SIDEBAR - GYM CONFIG */
-  .sidebar {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    padding: 24px 20px;
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
   }
-  .sidebar-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 20px;
-    letter-spacing: 1.5px;
-    color: var(--accent);
-    display: flex; align-items: center; gap: 8px;
+
+  /* CARDS */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: var(--shadow);
   }
-  .form-group { display: flex; flex-direction: column; gap: 6px; }
-  label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
-  input, textarea, select {
-    background: var(--card);
+  .card-full { grid-column: 1 / -1; }
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px; font-weight: 600;
+    color: var(--text);
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-title-icon {
+    width: 32px; height: 32px;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 10px 12px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.2s;
-    resize: vertical;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
   }
-  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
-  .section-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .section-label {
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+
+  /* FORM */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.8px;
     color: var(--muted);
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--border);
   }
-  .price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  input, textarea {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px; font-weight: 500;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical; width: 100%;
+  }
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(200,169,110,0.1);
+  }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+
+  /* PRICE GRID */
+  .price-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .price-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+
+  /* BUTTONS */
   .save-btn {
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: white;
+    width: 100%;
+    background: var(--accent);
+    color: #0e0e0e;
     border: none;
     border-radius: 10px;
-    padding: 12px;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 18px;
-    letter-spacing: 1.5px;
+    padding: 13px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.3px;
     cursor: pointer;
-    transition: transform 0.15s, opacity 0.15s;
-    margin-top: 4px;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 16px;
   }
-  .save-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-  .save-btn:active { transform: translateY(0); }
+  .save-btn:hover { background: var(--accent-hover); }
+  .save-btn:active { transform: scale(0.99); }
 
-  /* CHAT PREVIEW */
-  .chat-area {
-    display: flex;
-    flex-direction: column;
-    background: var(--bg);
-  }
-  .chat-header {
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  .copy-btn {
     background: var(--surface);
-  }
-  .ig-avatar {
-    width: 42px; height: 42px; border-radius: 50%;
-    background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-  }
-  .chat-header-info { flex: 1; }
-  .chat-header-name { font-weight: 600; font-size: 15px; }
-  .chat-header-sub { font-size: 12px; color: var(--muted); }
-  .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .chat-messages::-webkit-scrollbar { width: 4px; }
-  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-  .msg-row { display: flex; align-items: flex-end; gap: 8px; }
-  .msg-row.user { flex-direction: row-reverse; }
-  .msg-avatar {
-    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-    background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px;
-  }
-  .msg-avatar.bot-av {
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    font-size: 14px;
-  }
-  .bubble {
-    max-width: 72%;
-    padding: 10px 14px;
-    border-radius: 18px;
-    font-size: 14px;
-    line-height: 1.5;
-    position: relative;
-  }
-  .bubble.user-b {
-    background: linear-gradient(135deg, #833ab4, #5851db);
-    color: white;
-    border-bottom-right-radius: 4px;
-  }
-  .bubble.bot-b {
-    background: var(--card);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-bottom-left-radius: 4px;
-  }
-  .bubble-time { font-size: 10px; color: var(--muted); margin-top: 4px; }
-  .typing-indicator {
-    display: flex; gap: 4px; padding: 12px 16px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 18px; border-bottom-left-radius: 4px;
-    width: fit-content;
-  }
-  .typing-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--muted);
-    animation: typing 1.2s infinite;
-  }
-  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes typing {
-    0%,60%,100% { transform: translateY(0); opacity:0.4; }
-    30% { transform: translateY(-6px); opacity:1; }
-  }
-  .chat-input-area {
-    padding: 16px 20px;
-    border-top: 1px solid var(--border);
-    display: flex; gap: 10px; align-items: center;
-    background: var(--surface);
-  }
-  .chat-input {
-    flex: 1;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 10px 16px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    outline: none;
-    resize: none;
-    max-height: 80px;
-    transition: border-color 0.2s;
-  }
-  .chat-input:focus { border-color: var(--accent); }
-  .send-btn {
-    width: 42px; height: 42px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    transition: transform 0.15s, opacity 0.15s;
-    flex-shrink: 0;
-  }
-  .send-btn:hover { transform: scale(1.05); opacity:0.9; }
-  .send-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
-
-  /* RIGHT PANEL — PERSONA */
-  .right-panel {
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    overflow-y: auto;
-    padding: 24px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  .persona-header {
-    text-align: center;
-    padding: 20px 0 12px;
-  }
-  .persona-avatar-big {
-    width: 72px; height: 72px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px; margin: 0 auto 12px;
-    box-shadow: 0 0 30px rgba(255,61,61,0.3);
-  }
-  .persona-name {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px;
-    letter-spacing: 1px;
-  }
-  .persona-role { font-size: 13px; color: var(--muted); }
-  .tone-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip {
-    padding: 4px 12px;
-    border-radius: 100px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--card);
-    color: var(--muted);
-    transition: all 0.15s;
-  }
-  .chip.active {
-    background: rgba(255,61,61,0.15);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .stat-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    text-align: center;
-  }
-  .stat-num {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 26px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .quick-replies-list { display: flex; flex-direction: column; gap: 6px; }
-  .qr-item {
-    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: 9px 16px;
+    font-size: 12px; font-weight: 600;
+    font-family: 'Manrope', sans-serif;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-    color: var(--muted);
+    color: var(--text);
+    transition: background 0.15s, border-color 0.15s;
+    margin-top: 10px;
+    width: 100%;
   }
-  .qr-item:hover { border-color: var(--accent); background: rgba(255,61,61,0.05); color: var(--text); }
-  .qr-icon { margin-right: 6px; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-  /* Toast */
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--success);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 100px;
-    font-size: 14px;
-    font-weight: 500;
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-    z-index: 999;
+  /* PROMPT BOX */
+  .prompt-box {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: monospace;
+    line-height: 1.7;
+    max-height: 160px;
+    overflow-y: auto;
+    word-break: break-word;
+    white-space: pre-wrap;
   }
-  .toast.show { opacity: 1; }
-  .divider { border: none; border-top: 1px solid var(--border); }
+
+  /* STEPS */
+  .steps-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .step-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-item:last-child { border-bottom: none; }
+  .step-num {
+    width: 24px; height: 24px;
+    background: var(--accent);
+    color: #0e0e0e;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .step-text { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.5; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--accent);
+    color: #0e0e0e;
+    padding: 12px 24px;
+    border-radius: 100px;
+    font-size: 13px; font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 768px) {
+    .container { grid-template-columns: 1fr; padding: 20px 16px 60px; }
+    .card-full { grid-column: 1; }
+    .form-grid { grid-template-columns: 1fr; }
+    header { padding: 0 16px; }
+    .prompt-layout { grid-template-columns: 1fr !important; }
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">Gym<span>Bot</span> 🏋️</div>
-  <div style="display:flex;align-items:center;gap:12px">
-    <div id="botStatusPill" class="status-pill">
-      <div class="status-dot"></div>
-      Bot Active
+  <div class="logo">Gym<span>Bot</span></div>
+  <div class="header-right">
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('ru')">RU</button>
+      <button class="lang-btn" onclick="setLang('kz')">KZ</button>
     </div>
-    <div style="font-size:12px;color:var(--muted)">Instagram DM Assistant</div>
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      <span data-t="botActive">Bot Active</span>
+    </div>
   </div>
 </header>
 
-<div class="app">
+<div class="page-header">
+  <div class="page-title" data-t="pageTitle">Instagram DM Assistant</div>
+  <div class="page-subtitle" data-t="pageSubtitle">Configure your gym and manage your AI-powered Instagram bot</div>
+</div>
 
-  <div class="sidebar">
-    <div class="sidebar-title">⚙️ Gym Setup</div>
+<div class="container">
 
-    <div class="section-card">
-      <div class="section-label">Gym Info</div>
-      <div class="form-group">
-        <label>Gym Name</label>
+  <!-- GYM INFO -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-icon">🏢</div>
+      <span data-t="gymInfo">Gym Information</span>
+    </div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label data-t="gymName">Gym Name</label>
         <input id="gymName" type="text" value="IronForge Gym">
       </div>
-      <div class="form-group">
-        <label>Location / Address</label>
+      <div class="form-group full">
+        <label data-t="location">Location / Address</label>
         <input id="gymLocation" type="text" value="123 Fitness Ave, Almaty">
       </div>
       <div class="form-group">
-        <label>Working Hours</label>
+        <label data-t="hours">Working Hours</label>
         <input id="gymHours" type="text" value="Mon–Fri 6:00–23:00, Sat–Sun 8:00–22:00">
       </div>
       <div class="form-group">
-        <label>Phone / WhatsApp</label>
+        <label data-t="phone">Phone / WhatsApp</label>
         <input id="gymPhone" type="text" value="+7 777 123 4567">
       </div>
     </div>
+  </div>
 
-    <div class="section-card">
-      <div class="section-label">💰 Membership Prices</div>
-      <div class="price-row">
-        <div class="form-group">
-          <label>1 Month</label>
-          <input id="price1m" type="text" value="12,000 ₸">
-        </div>
-        <div class="form-group">
-          <label>3 Months</label>
-          <input id="price3m" type="text" value="30,000 ₸">
-        </div>
+  <!-- BOT PERSONA -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-icon">🤖</div>
+      <span data-t="botPersona">Bot Persona</span>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label data-t="botName">Bot Name</label>
+      <input id="botName" type="text" value="Sara">
+    </div>
+    <div class="form-group">
+      <label data-t="instructions">Custom Instructions</label>
+      <textarea id="customInstructions" rows="5">Always be warm and motivating. If someone seems hesitant about price, offer a free trial day. Respond in the same language the customer uses.</textarea>
+    </div>
+  </div>
+
+  <!-- PRICES -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-icon">💳</div>
+      <span data-t="pricing">Membership Pricing</span>
+    </div>
+    <div class="price-grid">
+      <div class="price-item">
+        <label data-t="price1m">1 Month</label>
+        <input id="price1m" type="text" value="12,000 ₸">
       </div>
-      <div class="price-row">
-        <div class="form-group">
-          <label>6 Months</label>
-          <input id="price6m" type="text" value="54,000 ₸">
-        </div>
-        <div class="form-group">
-          <label>1 Year</label>
-          <input id="price1y" type="text" value="96,000 ₸">
-        </div>
+      <div class="price-item">
+        <label data-t="price3m">3 Months</label>
+        <input id="price3m" type="text" value="30,000 ₸">
       </div>
-      <div class="form-group">
-        <label>Single Visit</label>
+      <div class="price-item">
+        <label data-t="price6m">6 Months</label>
+        <input id="price6m" type="text" value="54,000 ₸">
+      </div>
+      <div class="price-item">
+        <label data-t="price1y">1 Year</label>
+        <input id="price1y" type="text" value="96,000 ₸">
+      </div>
+      <div class="price-item" style="grid-column:1/-1">
+        <label data-t="dropIn">Single Visit</label>
         <input id="priceDrop" type="text" value="2,500 ₸">
       </div>
     </div>
+  </div>
 
-    <div class="section-card">
-      <div class="section-label">🏃 Services Offered</div>
-      <div class="form-group">
-        <label>Services (one per line)</label>
-        <textarea id="services" rows="5">Personal Training (from 5,000 ₸/session)
+  <!-- SERVICES -->
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-icon">🏋️</div>
+      <span data-t="services">Services Offered</span>
+    </div>
+    <div class="form-group">
+      <label data-t="servicesLabel">One service per line</label>
+      <textarea id="services" rows="7">Personal Training (from 5,000 ₸/session)
 Group Classes (Yoga, HIIT, Boxing)
 Nutrition Consultation
 Sauna & Recovery Zone
 Free Parking
 Locker Rooms & Showers</textarea>
-      </div>
     </div>
-
-    <div class="section-card">
-      <div class="section-label">🤖 Bot Persona</div>
-      <div class="form-group">
-        <label>Bot Name</label>
-        <input id="botName" type="text" value="Sara">
-      </div>
-      <div class="form-group">
-        <label>Custom Instructions</label>
-        <textarea id="customInstructions" rows="4">Always be warm and motivating. If someone seems hesitant about price, offer a free trial day. Respond in the same language the customer uses.</textarea>
-      </div>
-    </div>
-
-    <button class="save-btn" onclick="saveConfig()">💾 SAVE & APPLY</button>
+    <button class="save-btn" onclick="saveConfig()" data-t="saveBtn">Save & Apply Changes</button>
   </div>
 
-  <div class="chat-area">
-    <div class="chat-header">
-      <div class="ig-avatar">👤</div>
-      <div class="chat-header-info">
-        <div class="chat-header-name">Instagram Customer</div>
-        <div class="chat-header-sub">DM Preview — Test your bot</div>
-      </div>
-      <div style="font-size:12px;color:var(--muted);text-align:right">
-        💬 Live Preview<br>
-        <span style="color:var(--accent)">AI responds as your staff</span>
-      </div>
+  <!-- SYSTEM PROMPT -->
+  <div class="card card-full">
+    <div class="card-title">
+      <div class="card-title-icon">📋</div>
+      <span data-t="systemPrompt">Generated System Prompt</span>
     </div>
-
-    <div class="chat-messages" id="chatMessages">
-      <div class="msg-row">
-        <div class="msg-avatar bot-av">💪</div>
-        <div>
-          <div class="bubble bot-b" id="welcomeMsg">Hey! 👋 Welcome to <strong>IronForge Gym</strong>! I'm Sara, happy to help. What can I do for you today?</div>
-          <div class="bubble-time">Just now</div>
+    <div class="prompt-layout" style="display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start">
+      <div>
+        <div class="prompt-box" id="systemPromptPreview">Click "Save & Apply" to generate your system prompt...</div>
+        <button class="copy-btn" onclick="copyPrompt()" data-t="copyPrompt">📋 Copy System Prompt</button>
+      </div>
+      <div class="steps-box">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-text" data-t="step1">Configure your gym details and save</div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-text" data-t="step2">Copy the system prompt</div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-text" data-t="step3">Paste into Botpress AI instruction</div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-text" data-t="step4">Connect Instagram in Botpress Hub</div>
         </div>
       </div>
     </div>
-
-    <div class="chat-input-area">
-      <textarea class="chat-input" id="userInput" placeholder="Type a message as a customer..." rows="1" onkeydown="handleKey(event)"></textarea>
-      <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
-    </div>
   </div>
 
-  <div class="right-panel">
-    <div class="persona-header">
-      <div class="persona-avatar-big">💪</div>
-      <div class="persona-name" id="personaName">Sara</div>
-      <div class="persona-role">Your AI Gym Assistant</div>
-    </div>
-
-    <hr class="divider">
-
-    <div class="section-card">
-      <div class="section-label">Response Tone</div>
-      <div class="tone-chips">
-        <div class="chip active" onclick="selectTone(this)">Friendly</div>
-        <div class="chip" onclick="selectTone(this)">Professional</div>
-        <div class="chip" onclick="selectTone(this)">Energetic</div>
-        <div class="chip" onclick="selectTone(this)">Casual</div>
-        <div class="chip" onclick="selectTone(this)">Formal</div>
-      </div>
-    </div>
-
-    <div class="section-card">
-      <div class="section-label">📊 Session Stats</div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-num" id="statMsgs">0</div>
-          <div class="stat-label">Messages</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="statReplies">0</div>
-          <div class="stat-label">Bot Replies</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-card">
-      <div class="section-label">⚡ Quick Test Prompts</div>
-      <div class="quick-replies-list">
-        <div class="qr-item" onclick="quickSend('How much does membership cost?')">Membership prices</div>
-        <div class="qr-item" onclick="quickSend('Opening hours?')">Opening hours</div>
-        <div class="qr-item" onclick="quickSend('Мне нужна информация о ценах')">Russian Support</div>
-      </div>
-    </div>
-
-    <div class="section-card">
-      <div class="section-label">📋 Generated System Prompt</div>
-      <textarea id="systemPromptPreview" rows="6" style="font-size:11px;color:var(--muted)" readonly></textarea>
-      <button class="save-btn" style="font-size:14px;padding:8px" onclick="copyPrompt()">📋 COPY PROMPT</button>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-let selectedTone = 'Friendly';
-let msgCount = 0;
-let replyCount = 0;
-let conversationHistory = [];
-const API_URL = 'https://gymbot-production-a405.up.railway.app';
+const BACKEND = 'https://gymbot-production-a405.up.railway.app';
+
+const translations = {
+  en: {
+    botActive:'Bot Active', pageTitle:'Instagram DM Assistant',
+    pageSubtitle:'Configure your gym and manage your AI-powered Instagram bot',
+    gymInfo:'Gym Information', gymName:'Gym Name', location:'Location / Address',
+    hours:'Working Hours', phone:'Phone / WhatsApp', botPersona:'Bot Persona',
+    botName:'Bot Name', instructions:'Custom Instructions', pricing:'Membership Pricing',
+    price1m:'1 Month', price3m:'3 Months', price6m:'6 Months', price1y:'1 Year',
+    dropIn:'Single Visit', services:'Services Offered', servicesLabel:'One service per line',
+    saveBtn:'Save & Apply Changes', systemPrompt:'Generated System Prompt',
+    copyPrompt:'📋 Copy System Prompt', step1:'Configure your gym details and save',
+    step2:'Copy the system prompt', step3:'Paste into Botpress AI instruction',
+    step4:'Connect Instagram in Botpress Hub',
+  },
+  ru: {
+    botActive:'Бот активен', pageTitle:'Ассистент для Instagram DM',
+    pageSubtitle:'Настройте ваш зал и управляйте AI-ботом для Instagram',
+    gymInfo:'Информация о зале', gymName:'Название зала', location:'Адрес',
+    hours:'Часы работы', phone:'Телефон / WhatsApp', botPersona:'Персонаж бота',
+    botName:'Имя бота', instructions:'Дополнительные инструкции', pricing:'Стоимость абонементов',
+    price1m:'1 Месяц', price3m:'3 Месяца', price6m:'6 Месяцев', price1y:'1 Год',
+    dropIn:'Разовое посещение', services:'Услуги зала', servicesLabel:'По одной услуге на строку',
+    saveBtn:'Сохранить изменения', systemPrompt:'Системный промпт',
+    copyPrompt:'📋 Скопировать промпт', step1:'Настройте данные зала и сохраните',
+    step2:'Скопируйте системный промпт', step3:'Вставьте в инструкцию Botpress AI',
+    step4:'Подключите Instagram в Botpress Hub',
+  },
+  kz: {
+    botActive:'Бот белсенді', pageTitle:'Instagram DM Көмекшісі',
+    pageSubtitle:'Залыңызды баптаңыз және AI Instagram ботыңызды басқарыңыз',
+    gymInfo:'Зал туралы ақпарат', gymName:'Зал атауы', location:'Мекенжай',
+    hours:'Жұмыс уақыты', phone:'Телефон / WhatsApp', botPersona:'Бот тұлғасы',
+    botName:'Бот аты', instructions:'Қосымша нұсқаулар', pricing:'Абонемент бағалары',
+    price1m:'1 Ай', price3m:'3 Ай', price6m:'6 Ай', price1y:'1 Жыл',
+    dropIn:'Жекелей келу', services:'Зал қызметтері', servicesLabel:'Әр жолға бір қызмет',
+    saveBtn:'Өзгерістерді сақтау', systemPrompt:'Жүйелік промпт',
+    copyPrompt:'📋 Промптты көшіру', step1:'Зал деректерін баптап сақтаңыз',
+    step2:'Жүйелік промптты көшіріңіз', step3:'Botpress AI нұсқауына қойыңыз',
+    step4:'Botpress Hub-та Instagram қосыңыз',
+  }
+};
+
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+  const t = translations[lang];
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const key = el.getAttribute('data-t');
+    if (t[key]) el.textContent = t[key];
+  });
+}
 
 function getConfig() {
   return {
-    gymName: document.getElementById('gymName').value,
+    gym_name: document.getElementById('gymName').value,
     location: document.getElementById('gymLocation').value,
     hours: document.getElementById('gymHours').value,
     phone: document.getElementById('gymPhone').value,
@@ -546,146 +488,92 @@ function getConfig() {
     price1y: document.getElementById('price1y').value,
     priceDrop: document.getElementById('priceDrop').value,
     services: document.getElementById('services').value,
-    botName: document.getElementById('botName').value,
-    customInstructions: document.getElementById('customInstructions').value,
-    tone: selectedTone
+    bot_name: document.getElementById('botName').value,
+    custom_instructions: document.getElementById('customInstructions').value,
   };
 }
 
 function buildSystemPrompt(cfg) {
-  return `You are ${cfg.botName}, a ${cfg.tone.toLowerCase()} staff member at ${cfg.gymName}. 
-  📍 Location: ${cfg.location}. Hours: ${cfg.hours}. 💰 Prices: 1m: ${cfg.price1m}, Drop-in: ${cfg.priceDrop}.
-  Services: ${cfg.services}. Instructions: ${cfg.customInstructions}`;
+  return `You are a professional manager at ${cfg.gym_name}, named ${cfg.bot_name}.
+Always speak on behalf of the gym using "we / у нас / мы / бізде".
+NEVER say you are an AI. Write short casual replies like a confident manager.
+Max 1-2 sentences. Max 1 emoji per message. Never greet again mid-conversation.
+Answer in the same language the user writes in (Russian, English, Kazakh).
+
+GYM INFO:
+- Name: ${cfg.gym_name}
+- Location: ${cfg.location}
+- Hours: ${cfg.hours}
+- Phone: ${cfg.phone}
+
+PRICES:
+- 1 Month: ${cfg.price1m}
+- 3 Months: ${cfg.price3m}
+- 6 Months: ${cfg.price6m}
+- 1 Year: ${cfg.price1y}
+- Single Visit: ${cfg.priceDrop}
+
+SERVICES:
+${cfg.services}
+
+INSTRUCTIONS:
+${cfg.custom_instructions}`;
 }
 
 async function saveConfig() {
   const cfg = getConfig();
-  
-  // Update Local UI
-  document.getElementById('personaName').textContent = cfg.botName;
-  document.getElementById('systemPromptPreview').value = buildSystemPrompt(cfg);
-  document.getElementById('welcomeMsg').innerHTML = `Hey! 👋 Welcome to <strong>${cfg.gymName}</strong>! I'm ${cfg.botName}, happy to help.`;
-  
-  // SAVE TO CLOUD (Railway)
+  const btn = document.querySelector('.save-btn');
+  btn.textContent = '⏳ Saving...';
+  btn.disabled = true;
   try {
-    const response = await fetch(`${API_URL}/save-settings`, {
+    await fetch(`${BACKEND}/save-settings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        gym_name: cfg.gymName,
-        location: cfg.location,
-        hours: cfg.hours,
-        phone: cfg.phone,
-        price1m: cfg.price1m,
-        price3m: cfg.price3m,
-        price6m: cfg.price6m,
-        price1y: cfg.price1y,
-        priceDrop: cfg.priceDrop,
-        services: cfg.services,
-        bot_name: cfg.botName,
-        custom_instructions: cfg.customInstructions
-      })
+      body: JSON.stringify(cfg)
     });
-    if (response.ok) {
-        showToast('✅ Config Saved & Synced with Botpress!');
-        localStorage.setItem('gymSettings', JSON.stringify(cfg));
-    }
-  } catch (e) {
-    showToast('❌ Failed to sync with server');
-  }
-}
-
-async function sendMessage() {
-  const input = document.getElementById('userInput');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  appendMessage(text, 'user');
-  msgCount++;
-  document.getElementById('statMsgs').textContent = msgCount;
-  
-  // Get AI Response
-  showTyping();
-  conversationHistory.push({ role: 'user', content: text });
-  
-  try {
-    const response = await fetch(`${API_URL}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_prompt: buildSystemPrompt(getConfig()),
-        messages: conversationHistory
-      })
-    });
-    const data = await response.json();
-    removeTyping();
-    appendMessage(data.reply, 'bot');
-    conversationHistory.push({ role: 'assistant', content: data.reply });
-    replyCount++;
-    document.getElementById('statReplies').textContent = replyCount;
-  } catch (err) {
-    removeTyping();
-    appendMessage("Error connecting to server. Is Railway running?", 'bot');
-  }
-}
-
-function appendMessage(text, role) {
-  const container = document.getElementById('chatMessages');
-  const row = document.createElement('div');
-  row.className = `msg-row ${role === 'user' ? 'user' : ''}`;
-  row.innerHTML = role === 'user' ? 
-    `<div><div class="bubble user-b">${text}</div></div><div class="msg-avatar">👤</div>` :
-    `<div class="msg-avatar bot-av">💪</div><div><div class="bubble bot-b">${text}</div></div>`;
-  container.appendChild(row);
-  container.scrollTop = container.scrollHeight;
-}
-
-function showTyping() {
-  const container = document.getElementById('chatMessages');
-  const div = document.createElement('div');
-  div.id = 'typing';
-  div.className = 'msg-row';
-  div.innerHTML = `<div class="msg-avatar bot-av">💪</div><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-}
-
-function removeTyping() { document.getElementById('typing')?.remove(); }
-
-function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-
-function selectTone(el) {
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  selectedTone = el.textContent;
-  saveConfig();
-}
-
-function quickSend(t) { document.getElementById('userInput').value = t; sendMessage(); }
-
-function showToast(m) {
-  const t = document.getElementById('toast');
-  t.textContent = m; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  } catch(e) {}
+  document.getElementById('systemPromptPreview').textContent = buildSystemPrompt(cfg);
+  btn.disabled = false;
+  btn.setAttribute('data-t', 'saveBtn');
+  setLang(currentLang);
+  showToast('✅ ' + (currentLang === 'ru' ? 'Сохранено!' : currentLang === 'kz' ? 'Сақталды!' : 'Saved!'));
 }
 
 function copyPrompt() {
-  navigator.clipboard.writeText(document.getElementById('systemPromptPreview').value);
-  showToast('📋 Prompt Copied!');
+  const text = document.getElementById('systemPromptPreview').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('📋 ' + (currentLang === 'ru' ? 'Скопировано!' : currentLang === 'kz' ? 'Көшірілді!' : 'Copied!'));
+  });
 }
 
-// Load previous settings from browser memory on startup
-window.onload = () => {
-    const saved = localStorage.getItem('gymSettings');
-    if (saved) {
-        const s = JSON.parse(saved);
-        document.getElementById('gymName').value = s.gymName;
-        document.getElementById('gymLocation').value = s.location;
-        document.getElementById('price1m').value = s.price1m;
-        // ... (etc for other fields)
-    }
-    saveConfig();
-};
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function loadSavedSettings() {
+  try {
+    const res = await fetch(`${BACKEND}/get-settings`);
+    const d = await res.json();
+    if (d.gym_name) document.getElementById('gymName').value = d.gym_name;
+    if (d.location) document.getElementById('gymLocation').value = d.location;
+    if (d.hours) document.getElementById('gymHours').value = d.hours;
+    if (d.phone) document.getElementById('gymPhone').value = d.phone;
+    if (d.price1m) document.getElementById('price1m').value = d.price1m;
+    if (d.price3m) document.getElementById('price3m').value = d.price3m;
+    if (d.price6m) document.getElementById('price6m').value = d.price6m;
+    if (d.price1y) document.getElementById('price1y').value = d.price1y;
+    if (d.priceDrop) document.getElementById('priceDrop').value = d.priceDrop;
+    if (d.services) document.getElementById('services').value = d.services;
+    if (d.bot_name) document.getElementById('botName').value = d.bot_name;
+    if (d.custom_instructions) document.getElementById('customInstructions').value = d.custom_instructions;
+    document.getElementById('systemPromptPreview').textContent = buildSystemPrompt(getConfig());
+  } catch(e) {}
+}
+
+window.onload = loadSavedSettings;
 </script>
 </body>
 </html>
